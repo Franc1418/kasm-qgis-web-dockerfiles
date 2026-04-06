@@ -42,13 +42,23 @@ fi
 # ----------------------------------------------
 
 sleep 1
-qgis &
 
-for i in $(seq 1 40); do
-    sleep 3
-    WID=$(wmctrl -l | grep -i "qgis" | grep -v "splash" | awk '{print $1}' | head -1)
-    if [ -n "$WID" ]; then
-        wmctrl -ir "$WID" -b add,maximized_vert,maximized_horz
-        break
-    fi
-done
+# --- LANZAMIENTO DE QGIS ---
+if [ -n "$DB_PROJECT_NAME" ]; then
+    # Definimos el esquema (por defecto public si no se envía nada)
+    DB_SCHEMA="${DB_SCHEMA:-public}"
+    
+    # Reemplazamos espacios por %20 en el nombre del proyecto por si acaso
+    PROJECT_ENCODED="${DB_PROJECT_NAME// /%20}"
+    
+    # Armamos la URI de conexión. Al no pasar usuario/pass, QGIS los saca del .ini
+    PROJECT_URI="postgresql://?host=$DB_HOST&port=$DB_PORT&dbname=$DB_NAME&sslmode=disable&schema=$DB_SCHEMA&project=$PROJECT_ENCODED"
+    
+    # Lanzamos QGIS cargando el proyecto
+    qgis --project "$PROJECT_URI" &
+else
+    # Lanzamiento normal si no se especifica proyecto
+    qgis &
+fi
+
+# El bucle de wmctrl para maximizar se mantiene igual abajo...
