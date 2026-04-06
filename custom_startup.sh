@@ -16,25 +16,3 @@ echo "[KASM-CUSTOM] XFCE eliminado, iniciando OpenBox + QGIS..."
 # donde está configurado el lanzamiento de QGIS
 exec openbox-session
 ```
-
----
-
-## Por qué este enfoque funciona
-```
-Cadena de arranque de Kasm (lo que realmente pasa):
-                                                    
-  vnc_startup.sh                                   
-       │                                            
-       ├─► Inicia KasmVNC / websockify (WebSocket OK)
-       │                                            
-       ├─► Lee $KASM_SVC_WM ──► "openbox"  ✓       
-       │   (ya NO llama a xfce4-session)            
-       │                                            
-       └─► Ejecuta custom_startup.sh               
-                │                                   
-                ├─► pkill xfce4-* (limpieza)        
-                └─► openbox-session                 
-                         │                          
-                         └─► autostart script       
-                                  │                 
-                                  └─► QGIS maximizado
