@@ -1,12 +1,10 @@
 #!/bin/bash
 
-# Fondo negro
 xsetroot -solid "#1a1a1a" &
 
-# --- INYECCIÓN DINÁMICA DE LA BASE DE DATOS ---
+# --- Configuración de conexión en QGIS3.ini ---
 QGIS_DIR="/home/kasm-user/.local/share/QGIS/QGIS3/profiles/default/QGIS"
 QGIS_INI="$QGIS_DIR/QGIS3.ini"
-
 mkdir -p "$QGIS_DIR"
 
 if [ -n "$DB_HOST" ]; then
@@ -26,39 +24,27 @@ connections\\$CONN_NAME\\savePassword=true
 connections\\$CONN_NAME\\saveUsername=true
 connections\\$CONN_NAME\\allowGeometrylessTables=true
 connections\\$CONN_NAME\\projectsInDatabase=true
-connections\\$CONN_NAME\\onlyLineage=false
-connections\\$CONN_NAME\\onlyLookInLayerRegistries=false
-connections\\$CONN_NAME\\dontResolveType=false
-connections\\$CONN_NAME\\estimatedMetadata=false
-connections\\$CONN_NAME\\layerMetadata=false
-connections\\$CONN_NAME\\pga_overviews=false
-connections\\$CONN_NAME\\publicSchemaOnly=false
-
-[Postgres]
-onlyLookInLayerRegistries=false
 EOT
     fi
 fi
-# ----------------------------------------------
+# -----------------------------------------------
 
 sleep 1
 
-# --- LANZAMIENTO DE QGIS ---
-if [ -n "$DB_PROJECT_NAME" ]; then
-    # Definimos el esquema (por defecto public si no se envía nada)
-    DB_SCHEMA="${DB_SCHEMA:-public}"
-    
-    # Reemplazamos espacios por %20 en el nombre del proyecto por si acaso
-    PROJECT_ENCODED="${DB_PROJECT_NAME// /%20}"
-    
-    # Armamos la URI de conexión. Al no pasar usuario/pass, QGIS los saca del .ini
-    PROJECT_URI="postgresql://?host=$DB_HOST&port=$DB_PORT&dbname=$DB_NAME&sslmode=disable&schema=$DB_SCHEMA&project=$PROJECT_ENCODED"
-    
-    # Lanzamos QGIS cargando el proyecto
-    qgis --project "$PROJECT_URI" &
-else
-    # Lanzamiento normal si no se especifica proyecto
-    qgis &
-fi
+# Abrir QGIS con el proyecto almacenado en PostgreSQL
+# sslmode=disable es requerido por QGIS en la URI
+QGIS_PROJECT="postgresql://?host=${DB_HOST}&port=${DB_PORT}&dbname=${DB_NAME}&user=${DB_USER}&password=${DB_PASSWORD}&sslmode=disable&schema=projects&project=red_ftth"
 
-# El bucle de wmctrl para maximizar se mantiene igual abajo...
+echo "[AUTOSTART] Lanzando QGIS con proyecto: $QGIS_PROJECT" > /tmp/qgis_startup.log
+
+qgis --project "$QGIS_PROJECT" > /tmp/qgis.log 2>&1 &
+
+for i in $(seq 1 40); do
+    sleep 3
+    WID=$(wmctrl -l | grep -i "qgis" | grep -v "splash" | awk '{print $1}' | head -1)
+    if [ -n "$WID" ]; then
+        wmctrl -ir "$WID" -b add,maximized_vert,maximized_horz
+        echo "[AUTOSTART] QGIS maximizado en intento $i" >> /tmp/qgis_startup.log
+        break
+    fi
+done
