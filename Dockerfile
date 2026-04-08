@@ -27,33 +27,24 @@ RUN apt-get install -y gnupg software-properties-common wget \
 # 4. psycopg2 para conexión PostgreSQL desde Python
 RUN apt-get install -y python3-psycopg2 && apt-get clean
 
-# 5. 🔤 INSTALACIÓN DE FUENTES
-# 🔤 Fuentes custom desde Windows
-COPY fonts.tar /tmp/fonts.tar
-
-RUN mkdir -p /usr/share/fonts/truetype/custom && \
-    tar -xf /tmp/fonts.tar -C /usr/share/fonts/truetype/custom && \
-    fc-cache -f -v && \
-    rm /tmp/fonts.tar
-
-# 6. Variables de entorno
+# 5. Variables de entorno
 ENV KASM_SVC_WM="openbox"
 ENV KASM_SVC_PANEL=0
 ENV KASM_SVC_BACKGROUND=0
 ENV KASM_SVC_AUDIO=0
 ENV SINGLE_APPLICATION=1
 
-# 7. OpenBox
+# 6. OpenBox
 RUN mkdir -p /etc/xdg/openbox
 COPY rc.xml /etc/xdg/openbox/rc.xml
 COPY openbox_autostart.sh /etc/xdg/openbox/autostart
 RUN chmod +x /etc/xdg/openbox/autostart
 
-# 8. Startup de Kasm
+# 7. Startup de Kasm
 COPY custom_startup.sh /dockerstartup/custom_startup.sh
 RUN chmod +x /dockerstartup/custom_startup.sh
 
-# 9. Perfil de QGIS con startup.py
+# 8. Perfil de QGIS con startup.py
 RUN mkdir -p /home/kasm-user/.local/share/QGIS/QGIS3/profiles/default/python
 COPY startup.py /home/kasm-user/.local/share/QGIS/QGIS3/profiles/default/python/startup.py
 RUN chown -R 1000:1000 /home/kasm-user/.local
