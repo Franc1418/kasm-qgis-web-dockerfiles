@@ -14,6 +14,7 @@ if [ -n "$DB_HOST" ]; then
     DB_PORT="${DB_PORT:-5432}"
 
     if ! grep -q "$CONN_NAME" "$QGIS_INI" 2>/dev/null; then
+        # 1. Inyectamos las credenciales de conexión
         cat <<EOT >> "$QGIS_INI"
 
 [PostgreSQL]
@@ -38,27 +39,41 @@ connections\\$CONN_NAME\\publicSchemaOnly=false
 onlyLookInLayerRegistries=false
 EOT
     fi
+
+    # 2. NUEVO: Inyectamos el proyecto como "Proyecto Reciente" anclado
+    if [ -n "$DB_PROJECT_NAME" ]; then
+        DB_SCHEMA="${DB_SCHEMA:-public}"
+        PROJECT_ENCODED="${DB_PROJECT_NAME// /%20}"
+        
+        # Evitamos inyectarlo múltiples veces si el script corriera de nuevo
+        if ! grep -q "$PROJECT_ENCODED" "$QGIS_INI" 2>/dev/null; then
+            cat <<EOT >> "$QGIS_INI"
+
+[UI]
+UI\\recentProjects\\1\\path=postgresql://?host=$DB_HOST&port=$DB_PORT&dbname=$DB_NAME&user=$DB_USER&password=$DB_PASSWORD&sslmode=disable&schema=$DB_SCHEMA&project=$PROJECT_ENCODED
+UI\\recentProjects\\1\\title=$DB_PROJECT_NAME
+UI\\recentProjects\\1\\pin=true
+EOT
+        fi
+    fi
 fi
 # ----------------------------------------------
 
 sleep 1
 
 # --- LANZAMIENTO DE QGIS ---
-if [ -n "$DB_PROJECT_NAME" ]; then
-    # Definimos el esquema (por defecto public si no se envía nada)
-    DB_SCHEMA="${DB_SCHEMA:-public}"
-    
-    # Reemplazamos espacios por %20 en el nombre del proyecto por si acaso
-    PROJECT_ENCODED="${DB_PROJECT_NAME// /%20}"
-    
-    # Armamos la URI de conexión. Al no pasar usuario/pass, QGIS los saca del .ini
-    PROJECT_URI="postgresql://?host=$DB_HOST&port=$DB_PORT&dbname=$DB_NAME&sslmode=disable&schema=$DB_SCHEMA&project=$PROJECT_ENCODED"
-    
-    # Lanzamos QGIS cargando el proyecto
-    qgis --project "$PROJECT_URI" &
-else
-    # Lanzamiento normal si no se especifica proyecto
-    qgis &
-fi
+# Lanzamos QGIS de forma normal siempre. Al abrir, mostrará la pantalla de bienvenida 
+# con el proyecto reciente ya cargado y anclado.
+qgis &
 
-# El bucle de wmctrl para maximizar se mantiene igual abajo...
+# El bucle de wmctrl para maximizar se mantiene igual
+for i in $(seq 1 40); do
+    sleep 3
+    # Mantenemos el grep -v "splash" por si demora en cargar la ventana principal
+    WID=$(wmctrl -l | grep -i "qgis" | grep -v "splash" | awk '{print $1}' | head -1)
+    if [ -n "$WID" ]; then
+        wmctrl -ir "$WID" -b add,maximized_vert,maximized_horz
+        echo "QGIS maximizado en intento $i"
+        break
+    fi
+done
