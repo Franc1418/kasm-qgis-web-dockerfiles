@@ -2,22 +2,17 @@ FROM kasmweb/core-ubuntu-jammy:1.15.0
 
 USER root
 
-# 1. Purgar XFCE completamente
+# 1. Purgar XFCE
 RUN apt-get purge -y \
-      xfce4-panel \
-      xfdesktop4 \
-      xfce4-session \
-      xfwm4 \
-      xfce4-settings \
-    && apt-get autoremove -y \
-    && apt-get clean
+      xfce4-panel xfdesktop4 xfce4-session xfwm4 xfce4-settings \
+    && apt-get autoremove -y && apt-get clean
 
-# 2. Instalar OpenBox + utilidades
+# 2. OpenBox + utilidades
 RUN apt-get update && apt-get install -y \
       openbox obconf xdotool wmctrl \
     && apt-get clean
 
-# 3. Instalar QGIS desde repositorio oficial
+# 3. QGIS oficial
 RUN apt-get install -y gnupg software-properties-common wget \
     && mkdir -p /etc/apt/keyrings \
     && wget -qO /etc/apt/keyrings/qgis-archive-keyring.gpg \
@@ -29,21 +24,38 @@ RUN apt-get install -y gnupg software-properties-common wget \
     && apt-get install -y qgis qgis-plugin-grass \
     && apt-get clean
 
-# 4. Variables de entorno de Kasm
+# 4. psycopg2 para conexión PostgreSQL desde Python
+RUN apt-get install -y python3-psycopg2 && apt-get clean
+
+# 5. 🔤 INSTALACIÓN DE FUENTES
+# 🔤 Fuentes custom desde Windows
+COPY fonts.tar /tmp/fonts.tar
+
+RUN mkdir -p /usr/share/fonts/truetype/custom && \
+    tar -xf /tmp/fonts.tar -C /usr/share/fonts/truetype/custom && \
+    fc-cache -f -v && \
+    rm /tmp/fonts.tar
+
+# 6. Variables de entorno
 ENV KASM_SVC_WM="openbox"
 ENV KASM_SVC_PANEL=0
 ENV KASM_SVC_BACKGROUND=0
 ENV KASM_SVC_AUDIO=0
 ENV SINGLE_APPLICATION=1
 
-# 5. Configuración de OpenBox
+# 7. OpenBox
 RUN mkdir -p /etc/xdg/openbox
 COPY rc.xml /etc/xdg/openbox/rc.xml
 COPY openbox_autostart.sh /etc/xdg/openbox/autostart
 RUN chmod +x /etc/xdg/openbox/autostart
 
-# 6. Script de startup de Kasm
+# 8. Startup de Kasm
 COPY custom_startup.sh /dockerstartup/custom_startup.sh
 RUN chmod +x /dockerstartup/custom_startup.sh
+
+# 9. Perfil de QGIS con startup.py
+RUN mkdir -p /home/kasm-user/.local/share/QGIS/QGIS3/profiles/default/python
+COPY startup.py /home/kasm-user/.local/share/QGIS/QGIS3/profiles/default/python/startup.py
+RUN chown -R 1000:1000 /home/kasm-user/.local
 
 USER 1000
