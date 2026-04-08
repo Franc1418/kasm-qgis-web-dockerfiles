@@ -2,18 +2,26 @@ FROM kasmweb/core-ubuntu-jammy:1.15.0
 
 USER root
 
+# Evita prompts interactivos en builds
+ENV DEBIAN_FRONTEND=noninteractive
+
 # 1. Purgar XFCE
 RUN apt-get purge -y \
       xfce4-panel xfdesktop4 xfce4-session xfwm4 xfce4-settings \
-    && apt-get autoremove -y && apt-get clean
+    && apt-get autoremove -y \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# 2. OpenBox + utilidades
-RUN apt-get update && apt-get install -y \
+# 2. OpenBox + utilidades (FIX typo + build más robusto)
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
       openbox obconf xdotool wmctrl \
-    && apt-get clean
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # 3. QGIS oficial
-RUN apt-get install -y gnupg software-properties-common wget \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends gnupg software-properties-common wget \
     && mkdir -p /etc/apt/keyrings \
     && wget -qO /etc/apt/keyrings/qgis-archive-keyring.gpg \
        https://download.qgis.org/downloads/qgis-archive-keyring.gpg \
@@ -21,11 +29,15 @@ RUN apt-get install -y gnupg software-properties-common wget \
        https://qgis.org/ubuntu jammy main" \
        > /etc/apt/sources.list.d/qgis.list \
     && apt-get update \
-    && apt-get install -y qgis qgis-plugin-grass \
-    && apt-get clean
+    && apt-get install -y --no-install-recommends qgis qgis-plugin-grass \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # 4. psycopg2 para conexión PostgreSQL desde Python
-RUN apt-get install -y python3-psycopg2 && apt-get clean
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends python3-psycopg2 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # 5. Variables de entorno
 ENV KASM_SVC_WM="openbox"
