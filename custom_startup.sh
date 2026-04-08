@@ -15,4 +15,3 @@ echo "[KASM-CUSTOM] XFCE eliminado, iniciando OpenBox + QGIS..."
 # OpenBox lee automáticamente /etc/xdg/openbox/autostart
 # donde está configurado el lanzamiento de QGIS
 exec openbox-session
-```
