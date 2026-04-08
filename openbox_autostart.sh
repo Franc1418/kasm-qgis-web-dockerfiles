@@ -42,7 +42,7 @@ fi
 # ----------------------------------------------
 
 sleep 1
-qgis &
+qgis --code /home/kasm-user/.local/share/QGIS/QGIS3/profiles/default/python/startup.py &
 
 for i in $(seq 1 40); do
     sleep 3
