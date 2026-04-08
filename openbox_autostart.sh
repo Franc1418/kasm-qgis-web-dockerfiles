@@ -1,10 +1,12 @@
 #!/bin/bash
 
+# Fondo negro
 xsetroot -solid "#1a1a1a" &
 
-# --- Configuración de conexión en QGIS3.ini ---
+# --- INYECCIÓN DINÁMICA DE LA BASE DE DATOS ---
 QGIS_DIR="/home/kasm-user/.local/share/QGIS/QGIS3/profiles/default/QGIS"
 QGIS_INI="$QGIS_DIR/QGIS3.ini"
+
 mkdir -p "$QGIS_DIR"
 
 if [ -n "$DB_HOST" ]; then
@@ -25,6 +27,16 @@ connections\\$CONN_NAME\\savePassword=true
 connections\\$CONN_NAME\\saveUsername=true
 connections\\$CONN_NAME\\allowGeometrylessTables=true
 connections\\$CONN_NAME\\projectsInDatabase=true
+connections\\$CONN_NAME\\onlyLineage=false
+connections\\$CONN_NAME\\onlyLookInLayerRegistries=false
+connections\\$CONN_NAME\\dontResolveType=false
+connections\\$CONN_NAME\\estimatedMetadata=false
+connections\\$CONN_NAME\\layerMetadata=false
+connections\\$CONN_NAME\\pga_overviews=false
+connections\\$CONN_NAME\\publicSchemaOnly=false
+
+[Postgres]
+onlyLookInLayerRegistries=false
 EOT
     fi
 
@@ -45,24 +57,23 @@ EOT
         fi
     fi
 fi
-# -----------------------------------------------
+# ----------------------------------------------
 
 sleep 1
 
-# Abrir QGIS con el proyecto almacenado en PostgreSQL
-# sslmode=disable es requerido por QGIS en la URI
-QGIS_PROJECT="postgresql://?host=${DB_HOST}&port=${DB_PORT}&dbname=${DB_NAME}&user=${DB_USER}&password=${DB_PASSWORD}&sslmode=disable&schema=projects&project=red_ftth"
+# --- LANZAMIENTO DE QGIS ---
+# Lanzamos QGIS de forma normal siempre. Al abrir, mostrará la pantalla de bienvenida 
+# con el proyecto reciente ya cargado y anclado.
+qgis &
 
-echo "[AUTOSTART] Lanzando QGIS con proyecto: $QGIS_PROJECT" > /tmp/qgis_startup.log
-
-qgis --project "$QGIS_PROJECT" > /tmp/qgis.log 2>&1 &
-
+# El bucle de wmctrl para maximizar se mantiene igual
 for i in $(seq 1 40); do
     sleep 3
+    # Mantenemos el grep -v "splash" por si demora en cargar la ventana principal
     WID=$(wmctrl -l | grep -i "qgis" | grep -v "splash" | awk '{print $1}' | head -1)
     if [ -n "$WID" ]; then
         wmctrl -ir "$WID" -b add,maximized_vert,maximized_horz
-        echo "[AUTOSTART] QGIS maximizado en intento $i" >> /tmp/qgis_startup.log
+        echo "QGIS maximizado en intento $i"
         break
     fi
 done
