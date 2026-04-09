@@ -40,3 +40,4 @@ def load_layers():
 
 # ⏱️ Esperar a que QGIS esté listo
 QTimer.singleShot(8000, load_layers)
+    
